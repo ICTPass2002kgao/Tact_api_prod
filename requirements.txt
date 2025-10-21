@@ -7,7 +7,8 @@ certifi==2025.10.5
 charset-normalizer==3.4.4
 click==8.3.0
 deepface==0.0.95
-Django==5.2.7 
+Django==5.2.7
+django-restframework==0.0.1
 djangorestframework==3.16.1
 filelock==3.20.0
 fire==0.7.1
@@ -35,7 +36,6 @@ ml_dtypes==0.5.3
 mtcnn==1.0.0
 namex==0.1.0
 numpy==2.2.6
-opencv-python==4.12.0.88
 opencv-python-headless==4.12.0.88
 opt_einsum==3.4.0
 optree==0.17.0
