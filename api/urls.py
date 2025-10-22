@@ -6,5 +6,5 @@ from django.conf.urls.static import static
 
 
 urlpatterns = [
-    path('verify_faces/', views.recognize_face, name='recognize_face'),
+    path('api/verify_faces/', views.recognize_face, name='recognize_face'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
