@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED 1
 
 # Install libGL.so.1 dependency (essential for OpenCV)
 RUN apt-get update && \
-    apt-get install -y libgl1-mesa-glx && \
+    apt-get install -y libgl1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
