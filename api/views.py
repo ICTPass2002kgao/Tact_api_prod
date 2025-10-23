@@ -18,40 +18,53 @@ def download_file_from_url(url, path):
         print(f"Error downloading file from URL {url}: {e}")
         return False
 
-# --- Core Face Verification Function using face_recognition ---
+# --- Core Face Verification Function using face_recognition (UPDATED) ---
 
 def perform_face_recognition_verification(file1_path, file2_path):
     """
-    Performs face verification by checking for detection in both images and then comparing encodings.
+    Performs face verification by splitting detection and encoding.
+    Uses upsampling (UPSAMPLE_LEVEL=2) to improve detection of lower-quality images.
     """
+    # Use the upsampling level that worked in your local test
+    UPSAMPLE_LEVEL = 2 
+    
     try:
         # 1. Load the images
         img_live = face_recognition.load_image_file(file1_path)
         img_reference = face_recognition.load_image_file(file2_path)
 
-        # 2. Get the face encodings
-        encoding_live = face_recognition.face_encodings(img_live)
-        encoding_reference = face_recognition.face_encodings(img_reference)
+        # 2. Face DETECTION (Using upsampling to search harder)
+        live_locations = face_recognition.face_locations(img_live, number_of_times_to_upsample=UPSAMPLE_LEVEL)
+        ref_locations = face_recognition.face_locations(img_reference, number_of_times_to_upsample=UPSAMPLE_LEVEL)
         
         # 3. Validation: Check if a face was detected
-        if not encoding_live:
-            error_message = "Face detection failed in the live camera image."
+        if not live_locations:
+            error_message = "Face detection failed in the live camera image (low quality/bad lighting)."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
         
-        if not encoding_reference:
-            error_message = "Face detection failed in the Firebase reference image."
+        if not ref_locations:
+            error_message = "Face detection failed in the Firebase reference image (low quality/no face)."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
 
 
-        # 4. Compare faces
-        # The result is a list of booleans; we only compare the first live face against the first reference face.
+        # 4. Face ENCODING (Pass the detected locations to the encoding function)
+        # This step does NOT use the 'number_of_times_to_upsample' argument.
+        encoding_live = face_recognition.face_encodings(img_live, known_face_locations=live_locations)
+        encoding_reference = face_recognition.face_encodings(img_reference, known_face_locations=ref_locations)
+        
+        # Check if the encoding process failed (shouldn't happen if detection succeeded)
+        if not encoding_live or not encoding_reference:
+            error_message = "Face found, but feature extraction (encoding) failed unexpectedly."
+            return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
+            
+        # 5. Compare faces
         match_results = face_recognition.compare_faces(
             [encoding_reference[0]], # List of known faces (the reference)
             encoding_live[0]         # The unknown face (the live capture)
         )
         matched = match_results[0]
 
-        # Calculate face distance (lower is better, 0.6 is the default tolerance)
+        # Calculate face distance
         face_distances = face_recognition.face_distance(
             [encoding_reference[0]], 
             encoding_live[0]
@@ -60,13 +73,13 @@ def perform_face_recognition_verification(file1_path, file2_path):
         
         return {
             'matched': matched,
-            'distance': distance,
+            'distance': float(distance),
             'threshold': 0.6, 
             'error': None
         }
 
     except Exception as e:
-        # Catch any file loading or processing errors
+        # Catch any critical internal processing errors
         return {
             'matched': False,
             'distance': -1,
