@@ -18,41 +18,38 @@ def download_file_from_url(url, path):
         print(f"Error downloading file from URL {url}: {e}")
         return False
 
-# --- Core Face Verification Function using face_recognition (UPDATED) ---
+# --- Core Face Verification Function using face_recognition (UPDATED FOR CNN) ---
 
 def perform_face_recognition_verification(file1_path, file2_path):
     """
-    Performs face verification by splitting detection and encoding.
-    Uses upsampling (UPSAMPLE_LEVEL=2) to improve detection of lower-quality images.
+    Performs face verification by splitting detection and encoding, using the CNN model
+    for robust face location detection.
     """
-    # Use the upsampling level that worked in your local test
-    UPSAMPLE_LEVEL = 1 
     
     try:
         # 1. Load the images
         img_live = face_recognition.load_image_file(file1_path)
         img_reference = face_recognition.load_image_file(file2_path)
 
-        # 2. Face DETECTION (Using upsampling to search harder)
+        # 2. Face DETECTION (USING CNN MODEL, which worked locally)
         live_locations = face_recognition.face_locations(img_live, model="cnn")
         ref_locations = face_recognition.face_locations(img_reference, model="cnn")
-
+        
         # 3. Validation: Check if a face was detected
         if not live_locations:
-            error_message = "Face detection failed in the live camera image (low quality/bad lighting)."
+            error_message = "Face detection failed in the live camera image (CNN model). Ensure good lighting/pose."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
         
         if not ref_locations:
-            error_message = "Face detection failed in the Firebase reference image (low quality/no face)."
+            error_message = "Face detection failed in the Firebase reference image (CNN model). Check image quality."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
 
 
         # 4. Face ENCODING (Pass the detected locations to the encoding function)
-        # This step does NOT use the 'number_of_times_to_upsample' argument.
         encoding_live = face_recognition.face_encodings(img_live, known_face_locations=live_locations)
         encoding_reference = face_recognition.face_encodings(img_reference, known_face_locations=ref_locations)
         
-        # Check if the encoding process failed (shouldn't happen if detection succeeded)
+        # Check if the encoding process failed
         if not encoding_live or not encoding_reference:
             error_message = "Face found, but feature extraction (encoding) failed unexpectedly."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}

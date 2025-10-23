@@ -1,136 +1,84 @@
 import os
-import shutil
-import tempfile
-import urllib.request
-import face_recognition
-import numpy as np # Used by face_recognition internally
+import requests
+import json
 
 # --- Configuration ---
-# REPLACE THESE URLS with the images you want to test.
-# Use your Firebase URL for the reference image and a known good image for the live test.
+# IMPORTANT: Both files MUST exist in the same directory as this script.
+FILE_LIVE_IMAGE = "me.png"
+FILE_REFERENCE_IMAGE = "me1.jpg"
 
-FILE_LIVE_IMAGE = "me.png"  # <-- REPLACE with your test image URL (e.g., a perfect selfie)
-URL_REFERENCE_IMAGE = "https://firebasestorage.googleapis.com/v0/b/tact-3c612.firebasestorage.app/o/Tactso%20Branches%2FVaal%20University%20of%20technology%2FMediaOfficer%2FKgaogelo%20Mthimkhulu_1761076613576?alt=media&token=d5784e98-b3fb-4128-8ea1-b2c79592293b" # <-- Use one of your actual Firebase reference URLs
+# The endpoint where your Django server is running locally
+LOCAL_API_ENDPOINT = "http://127.0.0.1:8000/api/verify_faces/"
 
-# --- Utility Function to Download File ---
-
-def download_file_from_url(url, path):
-    """Downloads a file from a public URL to a specified path."""
-    try:
-        urllib.request.urlretrieve(url, path)
-        return True
-    except Exception as e:
-        print(f"ERROR: Failed to download {url}. Check URL and network. Details: {e}")
-        return False
-
-# --- Core Face Verification Function ---
-
-# --- Core Face Verification Function (CORRECTED) ---
-
-def perform_face_recognition_verification(file1_path, file2_path):
-    """
-    Performs face verification by splitting detection (where upsampling is used)
-    and encoding (which uses the detected locations).
-    """
-    # Increase upsampling to search harder for smaller/poorer quality faces.
-    # We will apply this to the detection step only.
-    UPSAMPLE_LEVEL = 2 
-    
-    try:
-        # 1. Load the images
-        img_live = face_recognition.load_image_file(file1_path)
-        img_reference = face_recognition.load_image_file(file2_path)
-
-        # 2. Face DETECTION (Use upsampling here)
-        # Note: We must check for face locations before proceeding to encoding.
-        live_locations = face_recognition.face_locations(img_live, number_of_times_to_upsample=UPSAMPLE_LEVEL)
-        ref_locations = face_recognition.face_locations(img_reference, number_of_times_to_upsample=UPSAMPLE_LEVEL)
-        
-        # 3. Validation: Check if a face was detected
-        if not live_locations:
-            return {'matched': False, 'message': 'FAILURE: No face detected in the LIVE image, even after upsampling.'}
-        
-        if not ref_locations:
-            return {'matched': False, 'message': 'FAILURE: No face detected in the REFERENCE image, even after upsampling.'}
-
-        # 4. Face ENCODING (Pass the detected locations to the encoding function)
-        encoding_live = face_recognition.face_encodings(img_live, known_face_locations=live_locations)
-        encoding_reference = face_recognition.face_encodings(img_reference, known_face_locations=ref_locations)
-        
-        # The locations were found, but encodings list might be empty if the landmark detection fails severely.
-        if not encoding_live or not encoding_reference:
-            return {'matched': False, 'message': 'FAILURE: Face found, but encoding extraction failed.'}
-        
-        # 5. Compare faces (using the first found face)
-        match_results = face_recognition.compare_faces(
-            [encoding_reference[0]], 
-            encoding_live[0]        
-        )
-        matched = match_results[0]
-
-        face_distances = face_recognition.face_distance(
-            [encoding_reference[0]], 
-            encoding_live[0]
-        )
-        distance = face_distances[0]
-        
-        return {
-            'matched': matched,
-            'distance': float(distance),
-            'message': "Match found successfully!" if matched else f"Faces do not match. Distance: {distance:.4f}"
-        }
-
-    except Exception as e:
-        return {
-            'matched': False,
-            'message': f'CRITICAL ERROR during processing: {str(e)}'
-        }
 # --- Main Execution Block ---
 
 if __name__ == "__main__":
-    temp_dir = tempfile.gettempdir()
-    unique_id = os.urandom(4).hex()
+    print("--- Starting Local API Test (Connecting to Django) ---")
     
-    # Define temp file paths
-    # The 'live_path' will be where we copy the local file.
-    live_path_temp = os.path.join(temp_dir, f'test_live_{unique_id}.jpg')
-    reference_path = os.path.join(temp_dir, f'test_ref_{unique_id}.jpg')
-    
-    # Get the absolute path for the local file
-    live_path_source = os.path.join(os.getcwd(), FILE_LIVE_IMAGE)
-    
-    print("--- Starting Face Verification Local Test ---")
-    
+    # 1. Prepare image files for the multipart request
     try:
-        # 1. Handle Live Image (Copy Local File to Temp Directory)
-        if not os.path.exists(live_path_source):
-            print(f"FATAL ERROR: Local file '{FILE_LIVE_IMAGE}' not found in the current directory.")
+        live_file_path = os.path.join(os.getcwd(), FILE_LIVE_IMAGE)
+        ref_file_path = os.path.join(os.getcwd(), FILE_REFERENCE_IMAGE)
+
+        if not os.path.exists(live_file_path) or not os.path.exists(ref_file_path):
+            print("FATAL ERROR: Ensure 'me.png' and 'me1.jpg' are in the current directory.")
             exit(1)
+
+        # In a real Django API call, we only send the LIVE image as a file 
+        # and the REFERENCE image as a URL string. 
+        # Since we are testing locally, we'll mimic the Flutter app's inputs,
+        # but for Django to properly process the 'reference_url' field, 
+        # we will send the *local file path* as the field's value for a diagnostic test.
+        # However, since your view is designed to download the URL, 
+        # let's assume you'll use a public Firebase URL for the reference image here
+        # to match the final production behavior.
         
-        print(f"Copying local live image: {FILE_LIVE_IMAGE}")
-        shutil.copyfile(live_path_source, live_path_temp)
+        # NOTE: Using the URL from your previous test for production fidelity
+        URL_REFERENCE_IMAGE = "https://firebasestorage.googleapis.com/v0/b/tact-3c612.firebasestorage.app/o/Tactso%20Branches%2FVaal%20University%20of%20technology%2FMediaOfficer%2FKgaogelo%20Mthimkhulu_1761076613576?alt=media&token=d5784e98-b3fb-4128-8ea1-b2c79592293b"
 
+        # 2. Setup the POST request data
+        files = {
+            # The Flutter app sends the camera image under the key 'live_image'
+            'live_image': (FILE_LIVE_IMAGE, open(live_file_path, 'rb'), 'image/jpeg')
+        }
+        data = {
+            # The Flutter app sends the reference URL under the key 'reference_url'
+            'reference_url': URL_REFERENCE_IMAGE
+        }
 
-        # 2. Download Reference Image
-        print(f"Downloading Reference Image from: {URL_REFERENCE_IMAGE}")
-        if not download_file_from_url(URL_REFERENCE_IMAGE, reference_path):
-            exit(1)
+        print(f"Sending POST request to: {LOCAL_API_ENDPOINT}")
+        
+        # 3. Send Request
+        response = requests.post(LOCAL_API_ENDPOINT, data=data, files=files)
+        
+        # 4. Process Response
+        response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
+        
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            print(f"\nCRITICAL ERROR: Failed to decode JSON response.")
+            print(f"Raw Response: {response.text}")
+            result = {"matched": False, "message": "Invalid JSON response from server."}
 
-        # 3. Perform Verification
-        print("\nPerforming Face Verification...")
-        result = perform_face_recognition_verification(live_path_temp, reference_path)
-
-        # 4. Display Results
-        print("\n--- TEST RESULTS ---")
-        print(f"✅ Match Status: {result['matched']}")
-        print(f"📝 Message: {result['message']}")
-        if result.get('distance') is not None and result['distance'] != -1:
+        # 5. Display Results
+        print("\n--- API TEST RESULTS ---")
+        print(f"HTTP Status: {response.status_code}")
+        print(f"✅ Match Status: {result.get('matched')}")
+        print(f"📝 Message: {result.get('message')}")
+        if 'distance' in result:
             print(f"📏 Distance: {result['distance']:.4f} (Threshold is ~0.6)")
         print("--------------------")
 
+    except requests.exceptions.ConnectionError:
+        print(f"\nNETWORK ERROR: Could not connect to the server at {LOCAL_API_ENDPOINT}")
+        print("ACTION: Ensure your Django server is running via 'python manage.py runserver 127.0.0.1:8000'")
+    except requests.exceptions.HTTPError as e:
+        print(f"\nHTTP ERROR: Received status code {e.response.status_code}")
+        print(f"Server Response Body: {e.response.text}")
+    except Exception as e:
+        print(f"\nAN UNEXPECTED ERROR OCCURRED: {e}")
     finally:
-        # 5. Cleanup
-        if os.path.exists(live_path_temp):
-            os.remove(live_path_temp)
-        if os.path.exists(reference_path):
-            os.remove(reference_path)
+        # Close file handlers
+        if 'live_image' in locals() and locals()['live_image'][1].closed is False:
+             locals()['live_image'][1].close()
