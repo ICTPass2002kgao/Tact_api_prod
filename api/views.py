@@ -26,7 +26,7 @@ def perform_face_recognition_verification(file1_path, file2_path):
     Uses upsampling (UPSAMPLE_LEVEL=2) to improve detection of lower-quality images.
     """
     # Use the upsampling level that worked in your local test
-    UPSAMPLE_LEVEL = 2 
+    UPSAMPLE_LEVEL = 1 
     
     try:
         # 1. Load the images
