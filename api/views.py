@@ -18,12 +18,12 @@ def download_file_from_url(url, path):
         print(f"Error downloading file from URL {url}: {e}")
         return False
 
-# --- Core Face Verification Function using face_recognition (UPDATED FOR CNN) ---
+# --- Core Face Verification Function using face_recognition (UPDATED FOR HOG) ---
 
 def perform_face_recognition_verification(file1_path, file2_path):
     """
-    Performs face verification by splitting detection and encoding, using the CNN model
-    for robust face location detection.
+    Performs face verification by splitting detection and encoding, using the HOG model
+    for faster face location detection, helping to prevent Railway timeouts.
     """
     
     try:
@@ -31,17 +31,17 @@ def perform_face_recognition_verification(file1_path, file2_path):
         img_live = face_recognition.load_image_file(file1_path)
         img_reference = face_recognition.load_image_file(file2_path)
 
-        # 2. Face DETECTION (USING CNN MODEL, which worked locally)
-        live_locations = face_recognition.face_locations(img_live, model="cnn")
-        ref_locations = face_recognition.face_locations(img_reference, model="cnn")
+        # 2. Face DETECTION (***CRITICAL CHANGE: SWITCHED FROM "cnn" TO "hog" FOR SPEED***)
+        live_locations = face_recognition.face_locations(img_live, model="hog")
+        ref_locations = face_recognition.face_locations(img_reference, model="hog")
         
         # 3. Validation: Check if a face was detected
         if not live_locations:
-            error_message = "Face detection failed in the live camera image (CNN model). Ensure good lighting/pose."
+            error_message = "Face detection failed in the live camera image (HOG model). Ensure good lighting/pose."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
         
         if not ref_locations:
-            error_message = "Face detection failed in the Firebase reference image (CNN model). Check image quality."
+            error_message = "Face detection failed in the Firebase reference image (HOG model). Check image quality."
             return {'matched': False, 'distance': -1, 'threshold': 0.6, 'error': error_message}
 
 
