@@ -1,19 +1,31 @@
 # Use an official Python runtime as a parent image (Debian based)
-FROM python:3.13-slim
+# Using python:3.11-slim for better compatibility with ML libraries
+FROM python:3.11-slim
 
 # Set environment variables for non-interactive install
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED 1
 
-# Install libGL.so.1 dependency (essential for OpenCV)
+# === BEGIN REQUIRED SYSTEM DEPENDENCIES ===
+# Install C++ build tools (cmake, build-essential) required for dlib compilation,
+# and runtime libraries (libgl1, python3-dev) for dlib/OpenCV.
 RUN apt-get update && \
-    apt-get install -y libgl1 && \
+    apt-get install -y \
+    cmake \
+    build-essential \
+    libgl1 \
+    libx11-dev \
+    libgtk-3-dev \
+    python3-dev \
+    && \
     rm -rf /var/lib/apt/lists/*
+# === END REQUIRED SYSTEM DEPENDENCIES ===
 
 # Set the working directory
 WORKDIR /app
 
 # Copy the requirements file and install Python packages
+# NOTE: The pip install should now succeed because the system dependencies are installed.
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
