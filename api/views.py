@@ -34,9 +34,9 @@ def perform_face_recognition_verification(file1_path, file2_path):
         img_reference = face_recognition.load_image_file(file2_path)
 
         # 2. Face DETECTION (Using upsampling to search harder)
-        live_locations = face_recognition.face_locations(img_live, number_of_times_to_upsample=UPSAMPLE_LEVEL)
-        ref_locations = face_recognition.face_locations(img_reference, number_of_times_to_upsample=UPSAMPLE_LEVEL)
-        
+        live_locations = face_recognition.face_locations(img_live, model="cnn")
+        ref_locations = face_recognition.face_locations(img_reference, model="cnn")
+
         # 3. Validation: Check if a face was detected
         if not live_locations:
             error_message = "Face detection failed in the live camera image (low quality/bad lighting)."
