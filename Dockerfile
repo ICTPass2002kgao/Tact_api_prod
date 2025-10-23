@@ -37,4 +37,4 @@ ENV PORT 8080
 
 # Command to run the Django application with Gunicorn
 # Replace 'tact_api.wsgi' with your actual WSGI path if different
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "tact_api.wsgi"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "tact_api.wsgi", "--timeout", "60"]
