@@ -1,5 +1,5 @@
 import os
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 
 def convert_video_to_audio(video_path: str, output_dir: str) -> str:
     """Converts a video file to an MP3 audio file."""
