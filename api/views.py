@@ -1,10 +1,14 @@
 import os
 import tempfile
 import urllib.request
+from django.conf import settings
 import face_recognition
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+ 
+from .serializers import VideoUploadSerializer
+from .utils import convert_video_to_audio
 
 # --- Utility Function to Download File ---
 
@@ -157,3 +161,64 @@ def recognize_face(request):
         'threshold': verification_result['threshold'],
         'message': "Face verified successfully." if verification_result['matched'] else "Faces do not match."
     }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def convert_video_to_audio_api(request):
+    """
+    Receives a video file, saves it, converts it to audio, and returns a URL.
+    """
+    # 1. Validate input data using the Serializer
+    serializer = VideoUploadSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    video_file = serializer.validated_data['video_file']
+    
+    # Define paths
+    upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+    conversion_dir = os.path.join(settings.MEDIA_ROOT, 'audio_output')
+    
+    os.makedirs(upload_dir, exist_ok=True)
+    os.makedirs(conversion_dir, exist_ok=True)
+    
+    temp_video_path = os.path.join(upload_dir, video_file.name)
+    
+    try:
+        # 2. Save the uploaded file temporarily
+        with open(temp_video_path, 'wb+') as destination:
+            for chunk in video_file.chunks():
+                destination.write(chunk)
+
+        # 3. Perform the conversion
+        converted_audio_path = convert_video_to_audio(
+            video_path=temp_video_path,
+            output_dir=conversion_dir
+        )
+        
+        # 4. Construct the response URL
+        audio_filename = os.path.basename(converted_audio_path)
+        # Use a path relative to MEDIA_URL
+        audio_url_path = f"{settings.MEDIA_URL}audio_output/{audio_filename}" 
+        # Build the full absolute URL
+        audio_url = request.build_absolute_uri(audio_url_path)
+
+        # 5. Clean up the temporary video file
+        os.remove(temp_video_path)
+
+        # 6. Return success response
+        return Response({
+            'status': 'success',
+            'audio_url': audio_url,
+            'message': 'Video successfully converted to MP3 audio.'
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        # Ensure cleanup even on error
+        if os.path.exists(temp_video_path):
+            os.remove(temp_video_path)
+
+        return Response({
+            'status': 'error',
+            'message': f'Conversion failed: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
