@@ -38,9 +38,9 @@ def perform_face_recognition_verification(file1_path, file2_path):
         img_reference = face_recognition.load_image_file(file2_path)
 
         # 2. Face DETECTION (***CRITICAL CHANGE: SWITCHED FROM "cnn" TO "hog" FOR SPEED***)
-        live_locations = face_recognition.face_locations(img_live, model="hog")
-        ref_locations = face_recognition.face_locations(img_reference, model="hog")
-        
+        live_locations = face_recognition.face_locations(img_live, model="cnn")
+        ref_locations = face_recognition.face_locations(img_reference, model="cnn")
+
         # 3. Validation: Check if a face was detected
         if not live_locations:
             error_message = "Face detection failed in the live camera image (HOG model). Ensure good lighting/pose."
