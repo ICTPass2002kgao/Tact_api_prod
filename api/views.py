@@ -1,7 +1,9 @@
 import os
 import tempfile
 import urllib.request
+import mimetypes  # ADDED: for setting Content-Type
 from django.conf import settings
+from django.http import FileResponse # ADDED: for streaming the file
 import face_recognition
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -163,10 +165,14 @@ def recognize_face(request):
     }, status=status.HTTP_200_OK)
 
 
+# -----------------------------------------------------------------------------
+# *** UPDATED FUNCTION TO STREAM AUDIO FILE DIRECTLY IN THE RESPONSE ***
+# -----------------------------------------------------------------------------
 @api_view(["POST"])
 def convert_video_to_audio_api(request):
     """
-    Receives a video file, saves it, converts it to audio, and returns a URL.
+    Receives a video file, converts it to audio, and streams the audio file back
+    in the response body.
     """
     # 1. Validate input data using the Serializer
     serializer = VideoUploadSerializer(data=request.data)
@@ -182,8 +188,12 @@ def convert_video_to_audio_api(request):
     os.makedirs(upload_dir, exist_ok=True)
     os.makedirs(conversion_dir, exist_ok=True)
     
-    temp_video_path = os.path.join(upload_dir, video_file.name)
+    # Use a unique name for the temporary video file
+    unique_id = os.urandom(4).hex()
+    temp_video_path = os.path.join(upload_dir, f'video_{unique_id}_{video_file.name}')
     
+    converted_audio_path = None
+
     try:
         # 2. Save the uploaded file temporarily
         with open(temp_video_path, 'wb+') as destination:
@@ -196,28 +206,46 @@ def convert_video_to_audio_api(request):
             output_dir=conversion_dir
         )
         
-        # 4. Construct the response URL
+        # 4. Prepare the File Response
         audio_filename = os.path.basename(converted_audio_path)
-        # Use a path relative to MEDIA_URL
-        audio_url_path = f"{settings.MEDIA_URL}audio_output/{audio_filename}" 
-        # Build the full absolute URL
-        audio_url = request.build_absolute_uri(audio_url_path)
+        
+        # Determine content type (should be 'audio/mpeg' for mp3)
+        content_type, encoding = mimetypes.guess_type(converted_audio_path)
+        if content_type is None:
+             content_type = 'application/octet-stream'
+
+        # Open the file in binary mode for streaming
+        audio_file_handle = open(converted_audio_path, 'rb')
+
+        # Stream the file back to the client
+        response = FileResponse(
+            audio_file_handle, 
+            content_type=content_type,
+            status=status.HTTP_201_CREATED # Use 201 to indicate creation
+        )
+        
+        # Set headers for downloading/saving the file
+        response['Content-Length'] = os.path.getsize(converted_audio_path)
+        response['Content-Disposition'] = f'attachment; filename="{audio_filename}"'
 
         # 5. Clean up the temporary video file
         os.remove(temp_video_path)
-
-        # 6. Return success response
-        return Response({
-            'status': 'success',
-            'audio_url': audio_url,
-            'message': 'Video successfully converted to MP3 audio.'
-        }, status=status.HTTP_201_CREATED)
+        
+        # NOTE: The converted audio file is left in MEDIA_ROOT for now.
+        # In a production app, you'd use a signal or a deferred task (e.g., Celery) 
+        # to delete it *after* the client has finished streaming/downloading.
+        
+        # 6. Return the file stream
+        return response
 
     except Exception as e:
-        # Ensure cleanup even on error
+        # Ensure cleanup of any temp files if they exist
         if os.path.exists(temp_video_path):
             os.remove(temp_video_path)
-
+        if converted_audio_path and os.path.exists(converted_audio_path):
+            # Optionally delete the failed conversion file
+            os.remove(converted_audio_path) 
+            
         return Response({
             'status': 'error',
             'message': f'Conversion failed: {str(e)}'
