@@ -22,7 +22,7 @@ from .utils import convert_video_to_audio
 # this will be loaded once per worker process.
 try:
     # Use "buffalo_l" model which is good for verification
-    GLOBAL_FACE_APP = FaceAnalysis(name="antelopev2", providers=["CPUExecutionProvider"])
+    GLOBAL_FACE_APP = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
     GLOBAL_FACE_APP.prepare(ctx_id=0)
     print("InsightFace model loaded successfully.")
 except Exception as e:
