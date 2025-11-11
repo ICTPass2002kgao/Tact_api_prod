@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os  # <-- FIX: Import os to read environment variables
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,13 +20,40 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+# <-- FIX: CRITICAL SECURITY WARNING
+# NEVER hardcode your secret key. Read it from Railway's environment variables.
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+ 
+
+
+
+
+
+# Quick-start development settings - unsuitable for production
+
+# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
+
 SECRET_KEY = 'django-insecure-_v%n0q)hehdy1e4ey+at#$s+q6yjl0s*lz53ytw^(2i_l6e_k9'
 
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
+
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+
+# <-- FIX: CRITICAL SECURITY WARNING
+# Set DEBUG = False in production on Railway. 
+
+
+# <-- FIX: Make ALLOWED_HOSTS more secure.
+# This will allow your Railway domain and local development.
+ALLOWED_HOSTS = ['.railway.app', 'localhost', '127.0.0.1','.web.app']
 
 
 # Application definition
@@ -39,11 +67,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'api',
-    'corsheaders',
+    'corsheaders', # <-- Good, you have this
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # <-- Good, this is at the top
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -72,7 +100,24 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'tact_api.wsgi.application'
-CORS_ALLOW_ALL_ORIGINS = True
+
+# <-- FIX: This is the main CORS fix.
+# Remove CORS_ALLOW_ALL_ORIGINS and use this instead.
+# This explicitly tells your server to trust your Flutter app.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:52478',  # Your Flutter app's origin from the error
+    'http://localhost',
+    'http://127.0.0.1',
+    'https://tact-api.up.railway.app', # Your server
+    'https://tact-3c612.web.app/',
+    'https://dankie-website.web.app/'
+]
+
+# You can also use this if you trust all subdomains of localhost
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"^http://localhost:\d+$",
+# ]
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
