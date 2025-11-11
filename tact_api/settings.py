@@ -109,8 +109,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
     'https://tact-api.up.railway.app', # Your server
-    'https://tact-3c612.web.app/',
-    'https://dankie-website.web.app/'
+    'https://tact-3c612.web.app',
+    'https://dankie-website.web.app'
 ]
 
 # You can also use this if you trust all subdomains of localhost
