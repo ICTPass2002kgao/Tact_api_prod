@@ -44,7 +44,7 @@ SECRET_KEY = 'django-insecure-_v%n0q)hehdy1e4ey+at#$s+q6yjl0s*lz53ytw^(2i_l6e_k9
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = True
+DEBUG = False
 
 
 # <-- FIX: CRITICAL SECURITY WARNING
@@ -53,8 +53,15 @@ DEBUG = True
 
 # <-- FIX: Make ALLOWED_HOSTS more secure.
 # This will allow your Railway domain and local development.
-ALLOWED_HOSTS = ['.railway.app', 'localhost', '127.0.0.1','.web.app']
 
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'tact-api.up.railway.app',
+    'tact-3c612.web.app',
+    'dankie-website.web.app',
+    '.railway.app'  # Covers all railway subdomains
+]
 
 # Application definition
 
@@ -104,14 +111,18 @@ WSGI_APPLICATION = 'tact_api.wsgi.application'
 # <-- FIX: This is the main CORS fix.
 # Remove CORS_ALLOW_ALL_ORIGINS and use this instead.
 # This explicitly tells your server to trust your Flutter app.
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:52478',  # Your Flutter app's origin from the error
-    'http://localhost',
-    'http://127.0.0.1',
-    'https://tact-api.up.railway.app', # Your server
+CSRF_TRUSTED_ORIGINS = [
+    'https://tact-api.up.railway.app',
     'https://tact-3c612.web.app',
-    'https://dankie-website.web.app'
+    'https://dankie-website.web.app',
+    'http://localhost',  # Your Flutter app's origin from the error
+    'http://localhost',
 ]
+
+# 3. FIX: CORS SETTINGS
+# To definitely fix the error, we allow all origins temporarily.
+# If you want to restrict it, uncomment the list below.
+CORS_ALLOW_ALL_ORIGINS = True
 
 # You can also use this if you trust all subdomains of localhost
 # CORS_ALLOWED_ORIGIN_REGEXES = [
